@@ -1,0 +1,90 @@
+# DCGNN model with ModelNet40 dataset
+
+DATASET:
+  BATCH_SIZE: 4
+  POINT_NUM: 1024
+  UNSEEN: True
+  NOISE_TYPE: crop  #clean, jitter, crop
+  ROT_MAG: 45.0
+  TRANS_MAG: 0.5
+  PARTIAL_P_KEEP:
+    - 0.7
+    - 0.7
+
+# Pairwise data2d configuration
+PAIR:
+  GT_GRAPH_CONSTRUCT: fc
+  REF_GRAPH_CONSTRUCT: fc
+
+# PGM model parameters
+PGM:
+  FEATURE_NODE_CHANNEL: 512
+  FEATURE_EDGE_CHANNEL: 512
+  BS_ITER_NUM: 20
+  BS_EPSILON: 1.0e-10
+  VOTING_ALPHA: 20.
+  GNN_FEAT: 512
+  GNN_LAYER: 2
+  NORMALS: True
+  FEATURES:
+    - xyz
+    - gxyz   #邻居点全局坐标系
+#    - lxyz   #邻居点局部坐标系
+#    - ppf
+#    - pcf    #当前点与邻居点的中心点形成的特征对
+  NEIGHBORSNUM: 20
+  USEATTEND: attentiontransformernoais # attentiontransformer # NoAttention
+#  USEINLIERRATE: True
+  SKADDCR: True
+#  SKADDCRVALUE: 0.1
+#  POINTER: transformer  # transformer
+
+MODEL_NAME: RGM_DGCNN
+DATASET_NAME: ModelNet40
+DATASET_FULL_NAME: modelnet40_ply_hdf5_2048
+
+MODULE: models.Net_noais
+DATALOADER_NUM: 0
+RANDOM_SEED: 123
+#PRE_DCPWEIGHT: True
+
+# available GPU ids
+GPUS:
+  - 0
+#  - 1
+
+# Dispaly information
+VISDOM:
+#  OPEN: True
+  PORT: 8097
+  SERVER: 218.244.149.221 # http://localhost,  218.244.149.221
+
+# Training settings
+TRAIN:
+  # start, end epochs
+  START_EPOCH: 0
+  NUM_EPOCHS: 200
+
+  # learning rate
+  OPTIM: SGD
+  LR: 1.0e-3
+  MOMENTUM: 0.9
+  LR_DECAY: 0.2
+  LR_STEP:  # (in epochs)
+    - 120
+    - 140
+
+# Evaluation settings and PCK metric
+EVAL:
+  ITERATION: True
+  CYCLE: True
+  ITERATION_NUM: 2
+  EPOCH: 163  # epoch to be tested
+
+# Experiment
+EXPERIMENT:
+  USEPGM: True
+#  USEREFINE: True
+  ICPMAXCDIST: 0.05
+#  SHAPENET: True
+#  USERANSAC: True
