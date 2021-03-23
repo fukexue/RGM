@@ -37,54 +37,7 @@ class MLPHead(nn.Module):
         return quat2mat(rotation), translation
 
 
-# class SVDHead(nn.Module):
-#     def __init__(self):
-#         super(SVDHead, self).__init__()
-#         self.reflect = nn.Parameter(torch.eye(3), requires_grad=False)
-#         self.reflect[2, 2] = -1
-
 def SVDslover(src_o, tgt_o, s_perm_mat):
-    # for i in range(s_perm_mat.shape[0]):
-    #     pmat_predi_index1 = torch.where(s_perm_mat[i])
-    #     if pmat_predi_index1[0].shape[0] != s_perm_mat[i].shape[0] and \
-    #             pmat_predi_index1[1].shape[0] != s_perm_mat[i].shape[1]:
-    #         src_in = src_o[i, pmat_predi_index1[0]]
-    #         tgt_in = tgt_o[i, pmat_predi_index1[0]]
-    #         src_cen = src_in.mean(dim=-2, keepdim=True)
-    #         tgt_cen = tgt_in.mean(dim=-2, keepdim=True)
-    #         pmat_predi_index0 = torch.where(torch.sum(s_perm_mat[i], dim=1)==0)
-    #         tgt_o[i, pmat_predi_index0[0]] = src_cen
-    #         tgt_o[i, pmat_predi_index0[0]] = tgt_cen
-    # reflect = torch.eye(3).cuda()
-    # reflect[2, 2] = -1
-    # src = src_o.permute(0, 2, 1).contiguous()
-    # tgt = tgt_o.permute(0, 2, 1).contiguous()
-    # batch_size = src.size(0)
-    #
-    # src_centered = src - src.mean(dim=2, keepdim=True)
-    #
-    # tgt_centered = tgt - tgt.mean(dim=2, keepdim=True)
-    #
-    # H = torch.matmul(src_centered, tgt_centered.transpose(2, 1).contiguous())
-    #
-    # # U, S, V = [], [], []
-    # R = []
-    #
-    # for i in range(src.size(0)):
-    #     u, s, v = torch.svd(H[i])
-    #     r = torch.matmul(v, u.transpose(1, 0).contiguous())
-    #     r_det = torch.det(r)
-    #     if r_det < 0:
-    #         u, s, v = torch.svd(H[i])
-    #         v = torch.matmul(v, reflect)
-    #         r = torch.matmul(v, u.transpose(1, 0).contiguous())
-    #         # r = r * self.reflect
-    #     R.append(r)
-    #
-    # R = torch.stack(R, dim=0)
-    #
-    # t = torch.matmul(-R, src.mean(dim=2, keepdim=True)) + tgt.mean(dim=2, keepdim=True)
-
     """Compute rigid transforms between two point sets
 
     Args:

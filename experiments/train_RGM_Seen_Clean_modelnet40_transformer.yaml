@@ -28,9 +28,7 @@ PGM:
   NORMALS: True
   FEATURES:
     - xyz
-    - gxyz    #邻居点全局坐标系
-#    - lxyz   #邻居点局部坐标系
-#    - ppf
+    - gxyz
   NEIGHBORSNUM: 20
   USEATTEND: attentiontransformer # attentiontransformer # NoAttention
 #  SKADDCR: True
@@ -55,7 +53,7 @@ GPUS:
 VISDOM:
 #  OPEN: True
   PORT: 8097
-  SERVER: 218.244.149.221 # http://localhost,  218.244.149.221
+  SERVER: http://localhost
 
 # Training settings
 TRAIN:

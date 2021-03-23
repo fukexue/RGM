@@ -30,9 +30,14 @@ def eval_model(model, dataloader, eval_epoch=None, metric_is_save=False, estimat
     print('model on device: {}'.format(device))
 
     if eval_epoch is not None:
-        model_path = str(Path(cfg.OUTPUT_PATH) / 'params' / 'params_{:04}.pt'.format(eval_epoch))
-        print('Loading model parameters from {}'.format(model_path))
-        load_model(model, model_path)
+        if eval_epoch == -1:
+            model_path = str(Path(cfg.OUTPUT_PATH) / 'params' / 'params_best.pt')
+            print('Loading best model parameters')
+            load_model(model, model_path)
+        else:
+            model_path = str(Path(cfg.OUTPUT_PATH) / 'params' / 'params_{:04}.pt'.format(eval_epoch))
+            print('Loading model parameters from {}'.format(model_path))
+            load_model(model, model_path)
 
     was_training = model.training
     model.eval()
@@ -41,8 +46,7 @@ def eval_model(model, dataloader, eval_epoch=None, metric_is_save=False, estimat
     for inputs in dataloader:
         P1_gt, P2_gt = [_.cuda() for _ in inputs['Ps']]
         n1_gt, n2_gt = [_.cuda() for _ in inputs['ns']]
-        # e1_gt, e2_gt = [_.cuda() for _ in inputs['es']]
-        A1_gt, A2_gt = [_.cuda() for _ in inputs['As']]  # edge连接性
+        A1_gt, A2_gt = [_.cuda() for _ in inputs['As']]
         perm_mat = inputs['gt_perm_mat'].cuda()
         T1_gt, T2_gt = [_.cuda() for _ in inputs['Ts']]
         Inlier_src_gt, Inlier_ref_gt = [_.cuda() for _ in inputs['Ins']]
@@ -50,7 +54,6 @@ def eval_model(model, dataloader, eval_epoch=None, metric_is_save=False, estimat
 
         batch_cur_size = perm_mat.size(0)
         iter_num = iter_num + 1
-        graph = defaultdict(list)
         infer_time = time.time()
 
         with torch.set_grad_enabled(False):
@@ -59,15 +62,15 @@ def eval_model(model, dataloader, eval_epoch=None, metric_is_save=False, estimat
                 P2_gt_copy = P2_gt.clone()
                 P1_gt_copy_inv = P1_gt.clone()
                 P2_gt_copy_inv = P2_gt.clone()
-                s_perm_mat, A_srcz, A_tgtz = caliters_perm(model, P1_gt_copy, P2_gt_copy, A1_gt, A2_gt, n1_gt, n2_gt, estimate_iters)
+                s_perm_mat = caliters_perm(model, P1_gt_copy, P2_gt_copy, A1_gt, A2_gt, n1_gt, n2_gt, estimate_iters)
                 if cfg.EVAL.CYCLE:
-                    s_perm_mat_inv, A_srcf, A_tgtf = caliters_perm(model, P2_gt_copy_inv, P1_gt_copy_inv, A2_gt, A1_gt, n2_gt, n1_gt, estimate_iters)
+                    s_perm_mat_inv = caliters_perm(model, P2_gt_copy_inv, P1_gt_copy_inv, A2_gt, A1_gt, n2_gt, n1_gt, estimate_iters)
                     s_perm_mat = s_perm_mat * s_perm_mat_inv.permute(0, 2, 1)
                 permevalloss=torch.tensor([0])
             else:
-                s_prem_tensor, Inlier_src_pre, Inlier_ref_pre_tensor, A_srcz, A_tgtz = model(P1_gt, P2_gt, A1_gt, A2_gt, n1_gt, n2_gt)
+                s_prem_tensor, Inlier_src_pre, Inlier_ref_pre_tensor = model(P1_gt, P2_gt, A1_gt, A2_gt, n1_gt, n2_gt)
                 if cfg.EVAL.CYCLE:
-                    s_prem_tensor_inv, Inlier_src_pre_inv, Inlier_ref_pre_tensor_inv, A_srcf, A_tgtf = model(P2_gt, P1_gt, A2_gt, A1_gt, n2_gt, n1_gt)
+                    s_prem_tensor_inv, Inlier_src_pre_inv, Inlier_ref_pre_tensor_inv = model(P2_gt, P1_gt, A2_gt, A1_gt, n2_gt, n1_gt)
 
                 if cfg.PGM.USEINLIERRATE:
                     s_prem_tensor = Inlier_src_pre * s_prem_tensor * Inlier_ref_pre_tensor.transpose(2, 1).contiguous()
@@ -79,7 +82,7 @@ def eval_model(model, dataloader, eval_epoch=None, metric_is_save=False, estimat
                 if cfg.EVAL.CYCLE:
                     s_perm_mat_inv = lap_solver(s_prem_tensor_inv, n2_gt, n1_gt, Inlier_src_pre_inv, Inlier_ref_pre_tensor_inv)
                     s_perm_mat = s_perm_mat*s_perm_mat_inv.permute(0,2,1)
-            #时间测试模块
+            #test time
             compute_transform(s_perm_mat, P1_gt[:,:,:3], P2_gt[:,:,:3], T1_gt[:,:3,:3], T1_gt[:,:3,3])
 
         infer_time = time.time() - infer_time
@@ -94,18 +97,6 @@ def eval_model(model, dataloader, eval_epoch=None, metric_is_save=False, estimat
         all_val_metrics_np['label'].append(Label)
         all_val_metrics_np['loss'].append(np.repeat(permevalloss.item(), batch_cur_size))
         all_val_metrics_np['infertime'].append(np.repeat(infer_time/batch_cur_size, batch_cur_size))
-        # 记录详细的对应关系
-        # all_val_metrics_np['correspond_nomean'].append(s_perm_mat.detach().cpu().numpy())
-        # all_val_metrics_np['gtcorrespond_nomean'].append(perm_mat.detach().cpu().numpy())
-        graph['A_srcz'].append(A_srcz.detach().cpu().numpy())
-        graph['A_tgtz'].append(A_tgtz.detach().cpu().numpy())
-        if cfg.EVAL.CYCLE:
-            graph['A_srcf'].append(A_srcf.detach().cpu().numpy())
-            graph['A_tgtf'].append(A_tgtf.detach().cpu().numpy())
-        graph = {k: np.concatenate(graph[k]) for k in graph}
-        if metric_is_save:
-            np.save(str(Path(cfg.OUTPUT_PATH) / ('graph' + str(iter_num))),
-                    graph)
 
         if iter_num % cfg.STATISTIC_STEP == 0 and metric_is_save:
             running_speed = cfg.STATISTIC_STEP * batch_cur_size / (time.time() - running_since)
@@ -129,18 +120,15 @@ def eval_model(model, dataloader, eval_epoch=None, metric_is_save=False, estimat
 
 
 def caliters_perm(model, P1_gt_copy, P2_gt_copy, A1_gt, A2_gt, n1_gt, n2_gt, estimate_iters):
-    # P1_gt_copy_1 = P1_gt_copy.clone()
     lap_solver1 = hungarian
     s_perm_indexs = []
     for estimate_iter in range(estimate_iters):
-        s_prem_i, Inlier_src_pre, Inlier_ref_pre, A_src1, A_tgt1 = model(P1_gt_copy, P2_gt_copy,
-                                                                         A1_gt, A2_gt, n1_gt, n2_gt)
+        s_prem_i, Inlier_src_pre, Inlier_ref_pre = model(P1_gt_copy, P2_gt_copy,
+                                                         A1_gt, A2_gt, n1_gt, n2_gt)
         if cfg.PGM.USEINLIERRATE:
             s_prem_i = Inlier_src_pre * s_prem_i * Inlier_ref_pre.transpose(2, 1).contiguous()
         s_perm_i_mat = lap_solver1(s_prem_i, n1_gt, n2_gt, Inlier_src_pre, Inlier_ref_pre)
-        # P2_gt_copy_1 = P2_gt_copy.clone()
         P2_gt_copy1, s_perm_i_mat_index = calcorrespondpc(s_perm_i_mat, P2_gt_copy)
-        # Norm2_copy, _ = calcorrespondpc(s_perm_i_mat, Norm2_copy)
         s_perm_indexs.append(s_perm_i_mat_index)
         if cfg.EXPERIMENT.USERANSAC:
             R_pre, T_pre, s_perm_i_mat = RANSACSVDslover(P1_gt_copy[:,:,:3], P2_gt_copy1[:,:,:3], s_perm_i_mat)
@@ -148,20 +136,7 @@ def caliters_perm(model, P1_gt_copy, P2_gt_copy, A1_gt, A2_gt, n1_gt, n2_gt, est
             R_pre, T_pre = SVDslover(P1_gt_copy[:,:,:3], P2_gt_copy1[:,:,:3], s_perm_i_mat)
         P1_gt_copy[:,:,:3] = torch.bmm(P1_gt_copy[:,:,:3], R_pre.transpose(2, 1).contiguous()) + T_pre[:, None, :]
         P1_gt_copy[:,:,3:6] = P1_gt_copy[:,:,3:6] @ R_pre.transpose(-1, -2)
-        # metric, metric_all = calmetrics(s_perm_i_mat, P1_gt_copy_1, P2_gt_copy_1, T1_gt[:, :3, :3], T1_gt[:, :3, 3], viz=viz)
-        # print(metric_all)
-    # s_perm_i_mat_sum = torch.sum(s_perm_i_mat, dim=2)
-    # s_perm = s_perm_indexs[0]
-    # for s_perm_index in s_perm_indexs[1:]:
-    #     for s_pi in range(s_perm.shape[0]):
-    #         s_perm[s_pi] = s_perm[s_pi, s_perm_index[s_pi]]
-    # s_pre_prem_mat = np.zeros((A2_gt.shape[0], A1_gt.shape[1], A2_gt.shape[1]))
-    # for _i in range(A2_gt.shape[0]):
-    #     for row, col in zip(range(A1_gt.shape[1]), s_perm[_i]):
-    #         if s_perm_i_mat_sum[_i, row]:
-    #             s_pre_prem_mat[_i, row, col] = 1
-    # s_perm_mat = torch.from_numpy(s_pre_prem_mat).to(s_prem_i).contiguous()
-    return s_perm_i_mat, A_src1, A_tgt1
+    return s_perm_i_mat
 
 
 if __name__ == '__main__':
@@ -171,15 +146,21 @@ if __name__ == '__main__':
     from utils.visdomshow import VisdomViz
     import socket
 
+    import scipy
+    if np.__version__=='1.19.2' and scipy.__version__=='1.5.0':
+        print('It is the same as the paper result')
+    else:
+        print('May not be the same as the results of the paper')
+
     args = parse_args('Point could registration of graph matching evaluation code.')
 
     import importlib
-    mod = importlib.import_module('PGM.model9')
+    mod = importlib.import_module(cfg.MODULE)
     Net = mod.Net
 
     if cfg.VISDOM.OPEN:
         hostname = socket.gethostname()
-        Visdomins = VisdomViz(env_name=hostname+'PGM_Eval', server=cfg.VISDOM.SERVER, port=cfg.VISDOM.PORT)
+        Visdomins = VisdomViz(env_name=hostname+'RGM_Eval', server=cfg.VISDOM.SERVER, port=cfg.VISDOM.PORT)
         Visdomins.viz.close()
     else:
         Visdomins = None

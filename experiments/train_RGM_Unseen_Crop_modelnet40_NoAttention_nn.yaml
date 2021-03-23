@@ -13,8 +13,8 @@ DATASET:
 
 # Pairwise data2d configuration
 PAIR:
-  GT_GRAPH_CONSTRUCT: fc
-  REF_GRAPH_CONSTRUCT: fc
+  GT_GRAPH_CONSTRUCT: near
+  REF_GRAPH_CONSTRUCT: near
 
 # PGM model parameters
 PGM:
@@ -28,12 +28,9 @@ PGM:
   NORMALS: True
   FEATURES:
     - xyz
-    - gxyz   #邻居点全局坐标系
-#    - lxyz   #邻居点局部坐标系
-#    - ppf
-#    - pcf    #当前点与邻居点的中心点形成的特征对
+    - gxyz
   NEIGHBORSNUM: 20
-  USEATTEND: NoAttention # attentiontransformer # NoAttention
+  USEATTEND: NoAttention_near # attentiontransformer # NoAttention
 #  USEINLIERRATE: True
   SKADDCR: True
 #  SKADDCRVALUE: 0.1
@@ -57,12 +54,12 @@ GPUS:
 VISDOM:
 #  OPEN: True
   PORT: 8097
-  SERVER: 218.244.149.221 # http://localhost,  218.244.149.221
+  SERVER: http://localhost
 
 # Training settings
 TRAIN:
   # start, end epochs
-  START_EPOCH: 123
+  START_EPOCH: 0
   NUM_EPOCHS: 200
 
   # learning rate
@@ -76,10 +73,10 @@ TRAIN:
 
 # Evaluation settings and PCK metric
 EVAL:
-  ITERATION: True
-  CYCLE: True
+#  ITERATION: True
+#  CYCLE: True
   ITERATION_NUM: 2
-  EPOCH: 169  # epoch to be tested
+  EPOCH: 0  # epoch to be tested
 
 # Experiment
 EXPERIMENT:

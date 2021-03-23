@@ -15,7 +15,7 @@ from utils.hungarian import hungarian
 from utils.visdomshow import VisdomViz
 from utils.config import cfg
 from parallel import DataParallel
-from evalpc import eval_model
+from eval import eval_model
 
 
 
@@ -38,8 +38,6 @@ def train_eval_model(model,
     optimal_acc = 0.0
     optimal_rot = np.inf
     device = next(model.parameters()).device
-
-    # train_writer = SummaryWriter(str(Path(cfg.OUTPUT_PATH) / ('tensorboard_train' + savefiletime)), flush_secs=10)
 
     print('model on device: {}'.format(device))
 
@@ -76,12 +74,10 @@ def train_eval_model(model,
 
         # Iterate over data3d.
         for inputs in dataloader['train']:
-            P1_gt, P2_gt = [_.cuda() for _ in inputs['Ps']]     #keypoints坐标
-            n1_gt, n2_gt = [_.cuda() for _ in inputs['ns']]     #keypoints数量
-            # e1_gt, e2_gt = [_.cuda() for _ in inputs['es']]     #edges数目
-            A1_gt, A2_gt = [_.cuda() for _ in inputs['As']]     #edge连接性
-            perm_mat = inputs['gt_perm_mat'].cuda()             #指派矩阵
-            # R1_gt, R2_gt = [_.cuda() for _ in inputs['Rs']]
+            P1_gt, P2_gt = [_.cuda() for _ in inputs['Ps']]     #keypoints coordinate
+            n1_gt, n2_gt = [_.cuda() for _ in inputs['ns']]     #keypoints number
+            A1_gt, A2_gt = [_.cuda() for _ in inputs['As']]     #edge connect matrix
+            perm_mat = inputs['gt_perm_mat'].cuda()             #permute matrix
             T1_gt, T2_gt = [_.cuda() for _ in inputs['Ts']]
             Inlier_src_gt, Inlier_ref_gt = [_.cuda() for _ in inputs['Ins']]
 
@@ -108,14 +104,6 @@ def train_eval_model(model,
                 # backward + optimize
                 loss.backward()
                 optimizer.step()
-                # print('--------------------------------------------------')
-                # print('--------------------------------------------------')
-                # print('loss:', loss.item())
-                # for name, parms in model.named_parameters():
-                #     print('-->name:', name,
-                #           '-->grad_requies:', parms.requires_grad,
-                #           '-->weight:', torch.mean(torch.abs(parms.data)),
-                #           '-->grad_value:', torch.mean(torch.abs(parms.grad)))
 
                 # training accuracy statistic
                 s_perm_mat = lap_solver(s_pred, n1_gt, n2_gt, Inlier_src_pre, Inlier_ref_pre)
@@ -147,7 +135,7 @@ def train_eval_model(model,
         save_model(model, str(checkpoint_path / 'params_{:04}.pt'.format(epoch + 1)))
         torch.save(optimizer.state_dict(), str(checkpoint_path / 'optim_{:04}.pt'.format(epoch + 1)))
 
-        # 是否需要保存训练过程中的指标
+        # to save values during training
         metric_is_save= False
         if metric_is_save:
             np.save(str(Path(cfg.OUTPUT_PATH) / ('train_log_' + savefiletime + '_metric')),
@@ -199,7 +187,7 @@ if __name__ == '__main__':
 
     if cfg.VISDOM.OPEN:
         hostname = socket.gethostname()
-        Visdomins = VisdomViz(env_name=hostname+'PGM_Train', server=cfg.VISDOM.SERVER, port=cfg.VISDOM.PORT)
+        Visdomins = VisdomViz(env_name=hostname+'RGM_Train', server=cfg.VISDOM.SERVER, port=cfg.VISDOM.PORT)
         Visdomins.viz.close()
     else:
         Visdomins = None
@@ -234,31 +222,7 @@ if __name__ == '__main__':
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     model = Net()
-
-    # load pretrained model para
-    if cfg.PRE_DCPWEIGHT:
-        model_dict = model.state_dict()
-        modelpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pretrained', 'model.1024_1.t7')
-        gcnnweight = torch.load(modelpath, map_location='cpu')
-
-        # change_pointefeature = True
-        # if change_pointefeature:
-        #     gcnnweight2 = collections.OrderedDict(
-        #         [('pointfeaturer' + k[6:], v) if 'module.' in k else (k, v) for k, v in gcnnweight.items()])
-        #     gcnnweight2 = collections.OrderedDict(
-        #         [('pointfeaturer.bn11111' + k[17:], v) if '.bn5.' in k else (k, v) for k, v in gcnnweight2.items()])
-        #     gcnnweight2 = collections.OrderedDict(
-        #         [('pointfeaturer.bn11111' + k[17:], v) if '.conv5.' in k else (k, v) for k, v in gcnnweight2.items()])
-        #     modelpath2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pretrained', 'model.1024_1.t7')
-        #     torch.save(gcnnweight2, modelpath2)
-
-        pretrained_dict = {k: v for k, v in gcnnweight.items() if k in model_dict}
-        model_dict.update(pretrained_dict)
-        model.load_state_dict(model_dict)
-        print('load DGCNN weight sucess')
-
     model = model.cuda()
-
     permLoss = PermLoss()
 
     if cfg.TRAIN.OPTIM == 'SGD':

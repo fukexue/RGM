@@ -3,8 +3,8 @@
 DATASET:
   BATCH_SIZE: 4
   POINT_NUM: 1024
-#  UNSEEN: True
-  NOISE_TYPE: clean  #clean, jitter, crop
+  UNSEEN: True
+  NOISE_TYPE: crop  #clean, jitter, crop
   ROT_MAG: 45.0
   TRANS_MAG: 0.5
   PARTIAL_P_KEEP:
@@ -30,8 +30,9 @@ PGM:
     - xyz
     - gxyz
   NEIGHBORSNUM: 20
-  USEATTEND: attentiontransformer # attentiontransformer # NoAttention
-#  SKADDCR: True
+  USEATTEND: NoAttention # attentiontransformer # NoAttention
+#  USEINLIERRATE: True
+  SKADDCR: True
 #  SKADDCRVALUE: 0.1
 #  POINTER: transformer  # transformer
 
@@ -58,30 +59,29 @@ VISDOM:
 # Training settings
 TRAIN:
   # start, end epochs
-  START_EPOCH: 0
-  NUM_EPOCHS: 30
-
-  LOSS_FUNC: perm
+  START_EPOCH: 123
+  NUM_EPOCHS: 200
 
   # learning rate
   OPTIM: SGD
   LR: 1.0e-3
   MOMENTUM: 0.9
-  LR_DECAY: 0.1
+  LR_DECAY: 0.2
   LR_STEP:  # (in epochs)
-    - 15
-    - 25
+    - 120
+    - 140
 
 # Evaluation settings and PCK metric
 EVAL:
-  ITERATION: True
-  CYCLE: True
+#  ITERATION: True
+#  CYCLE: True
   ITERATION_NUM: 2
-  EPOCH: -1  # epoch to be tested
+  EPOCH: 0  # epoch to be tested
 
 # Experiment
 EXPERIMENT:
   USEPGM: True
 #  USEREFINE: True
-  ICPMAXCDIST: 0.1
+  ICPMAXCDIST: 0.05
 #  SHAPENET: True
+#  USERANSAC: True
