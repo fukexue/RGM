@@ -8,7 +8,7 @@ This repository provides code and data required to train and evaluate RGM. It re
 
 ## Instructions
 This code has been tested on 
-- Python 3.6.10, PyTorch 1.2.0, CUDA 10.2, GeForce RTX 2080Ti/GeForce GTX 1080
+- Python 3.6.10, PyTorch 1.2.0, CUDA 10.2, GeForce RTX 2080Ti/GeForce GTX 1080.
 
 ### Requirements
 To create a virtual environment and install the required dependences please run:
@@ -20,7 +20,7 @@ pip install -r requirements.txt
 ```
 in your working folder.
 
-**Note**: numpy.__version__=='1.19.2' and scipy.__version__=='1.5.0', if you want to get results in paper.
+**Note**: If you want to get the same results as in the paper, install numpy.__version__=='1.19.2' and scipy.__version__=='1.5.0'.
 
 ### Datasets and pretrained models
 For ModelNet40, the data will be downloaded automatically.
