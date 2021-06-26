@@ -3,7 +3,7 @@ This repository provides code and data required to train and evaluate RGM. It re
 
 ### [Robust Point Cloud Registration Framework Based on Deep Graph Matching](https://arxiv.org/abs/2103.04256v1)
 
-[Kexue Fu](https://github.com/fukexue), [Shaolei Liu](), [Xiaoyuan Luo](), [Manning Wang]()
+[Kexue Fu](https://github.com/fukexue), [Shaolei Liu](https://github.com/slliuEric), [Xiaoyuan Luo](https://github.com/XiaoyuanL73), [Manning Wang]()
 
 
 ## Instructions

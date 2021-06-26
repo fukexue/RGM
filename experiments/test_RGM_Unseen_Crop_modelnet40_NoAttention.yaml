@@ -59,7 +59,7 @@ VISDOM:
 # Training settings
 TRAIN:
   # start, end epochs
-  START_EPOCH: 123
+  START_EPOCH: 0
   NUM_EPOCHS: 200
 
   # learning rate
